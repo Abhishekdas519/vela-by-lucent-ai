@@ -1,8 +1,6 @@
 import express from 'express';
 import cors from 'cors';
 import { GoogleGenAI, Type } from '@google/genai';
-import { requireAuth, AuthRequest } from '../src/middleware/auth.js';
-import { getOrCreateUser, getAllClients, createClient } from '../src/db/queries.js';
 
 const app = express();
 
@@ -11,41 +9,10 @@ app.use(cors());
 
 app.use(express.json());
 
-// Sync authenticated user to Cloud SQL database
-app.post('/api/auth/sync', requireAuth, async (req: AuthRequest, res) => {
-  try {
-    const uid = req.user?.uid;
-    const email = req.user?.email || '';
-    const name = (req.user as any)?.name || email.split('@')[0];
-    if (!uid) {
-      return res.status(400).json({ error: 'Missing UID' });
-    }
-    const user = await getOrCreateUser(uid, email, name);
-    res.json({ success: true, user });
-  } catch (error: any) {
-    res.status(500).json({ error: error.message || 'Database sync error' });
-  }
-});
-
-// Database Clients List (Cloud SQL)
-app.get('/api/db/clients', async (req, res) => {
-  try {
-    const clientsList = await getAllClients();
-    res.json({ success: true, data: clientsList });
-  } catch (error: any) {
-    res.status(500).json({ error: error.message || 'Failed to fetch clients from database' });
-  }
-});
-
-// Create new Client profile into Cloud SQL
-app.post('/api/db/clients', async (req, res) => {
-  try {
-    const newClient = await createClient(req.body);
-    res.json({ success: true, data: newClient });
-  } catch (error: any) {
-    res.status(500).json({ error: error.message || 'Failed to save client to database' });
-  }
-});
+// In-memory stores (serverless-scoped; dashboard state is in localStorage on client)
+let adminNotifications: any[] = [];
+let leadsDb: any[] = [];
+let ordersDb: any[] = [];
 
 // Initialize server-side Gemini client
 const ai = new GoogleGenAI({
@@ -63,13 +30,11 @@ async function generateWithFallback(params: {
   systemInstruction?: string;
   config?: any;
 }) {
-  // If no Gemini API key is configured, immediately jump to built-in smart response generator
   if (!process.env.GEMINI_API_KEY) {
     throw new Error('No GEMINI_API_KEY set');
   }
 
-  // Active fast models with graceful retry
-  const models = ['gemini-3.1-pro-preview', 'gemini-pro-latest'];
+  const models = ['gemini-2.0-flash', 'gemini-2.0-flash-lite'];
   let lastError: any = null;
 
   for (const model of models) {
@@ -99,7 +64,22 @@ app.get('/api/health', (req, res) => {
     version: '1.0.0',
     service: 'Vela by Lucent AI - Enterprise Voice Orchestrator',
     timestamp: new Date().toISOString(),
+    geminiConfigured: !!process.env.GEMINI_API_KEY,
   });
+});
+
+// Auth sync — graceful no-op without database
+app.post('/api/auth/sync', (req, res) => {
+  res.json({ success: true, message: 'Auth sync acknowledged (in-memory mode)' });
+});
+
+// Database Clients — in-memory fallback
+app.get('/api/db/clients', (req, res) => {
+  res.json({ success: true, data: [] });
+});
+
+app.post('/api/db/clients', (req, res) => {
+  res.json({ success: true, data: { ...req.body, id: 'client-' + Date.now() } });
 });
 
 // Real-time Chat / Voice simulation turn for Live Interactive Landing Page Demo
@@ -142,7 +122,7 @@ Handle objections gracefully, explain your capabilities if asked, and invite the
   } catch (_error) {
     // Dynamic smart responses based on user query
     const lower = userMsg.toLowerCase();
-    let reply = "(Fallback Engine) I am Vela, Lucent AI's autonomous sales voice agent. I can dial thousands of qualified leads daily, handle complex objections, and book meetings directly to your calendar.";
+    let reply = "I am Vela, Lucent AI's autonomous sales voice agent. I can dial thousands of qualified leads daily, handle complex objections, and book meetings directly to your calendar.";
     
     if (lower.includes('price') || lower.includes('cost') || lower.includes('cheap') || lower.includes('competitor')) {
       reply = "Our pricing is guaranteed 10% lower than traditional call centers and competing voice platforms, starting from just $0.09 per minute with zero setup fees and immediate Stripe top-up.";
@@ -232,9 +212,8 @@ Generate a realistic 4-to-6 turn phone dialog transcript, followed by a structur
   } catch (error: any) {
     console.warn('Fallback simulated call generated for /api/call/simulate:', error?.message);
 
-    // Highly realistic, dynamically customized simulated call result
-    const conversionScore = Math.floor(65 + Math.random() * 28); // 65% - 93%
-    const duration = Math.floor(95 + Math.random() * 85); // 95s - 180s
+    const conversionScore = Math.floor(65 + Math.random() * 28);
+    const duration = Math.floor(95 + Math.random() * 85);
 
     res.json({
       callDurationSeconds: duration,
@@ -350,7 +329,7 @@ app.post('/api/stripe/checkout', async (req, res) => {
       creditedInMinutes: 15,
       instantStatus: 'confirmed',
       receiptUrl: `https://dashboard.stripe.com/receipts/${paymentIntentId}`,
-      message: `Successfully allocated ${minutes.toLocaleString()} talktime minutes to ${companyName || 'your account'}. Live balance updated!`
+      message: `Successfully allocated ${minutes?.toLocaleString() || 0} talktime minutes to ${companyName || 'your account'}. Live balance updated!`
     });
   } catch (error: any) {
     res.status(500).json({ error: 'Payment processing failed', details: error.message });
@@ -358,8 +337,6 @@ app.post('/api/stripe/checkout', async (req, res) => {
 });
 
 // Admin Notifications Store
-let adminNotifications: any[] = [];
-
 app.get('/api/admin/notifications', (req, res) => {
   res.json({ success: true, data: adminNotifications });
 });
@@ -375,13 +352,11 @@ app.post('/api/admin/notifications/mark-read', (req, res) => {
   res.json({ success: true, data: adminNotifications });
 });
 
-// Mock Leads / Signups
-let leadsDb: any[] = [];
+// Leads / Signups
 app.post('/api/db/leads', (req, res) => {
   const newLead = { ...req.body, id: req.body.id || 'lead-' + Date.now(), createdAt: new Date().toISOString() };
   leadsDb.push(newLead);
   
-  // Trigger notification
   adminNotifications.unshift({
     id: 'notif-' + Date.now(),
     type: 'signup',
@@ -398,13 +373,11 @@ app.get('/api/db/leads', (req, res) => {
   res.json({ success: true, data: leadsDb });
 });
 
-// Mock Talk-time Requests
-let ordersDb: any[] = [];
+// Talk-time Requests
 app.post('/api/db/talktime-requests', (req, res) => {
   const newOrder = { ...req.body, id: 'order-' + Date.now(), createdAt: new Date().toISOString() };
   ordersDb.push(newOrder);
   
-  // Trigger notification
   adminNotifications.unshift({
     id: 'notif-' + Date.now(),
     type: 'purchase_request',

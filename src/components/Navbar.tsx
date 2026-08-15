@@ -175,14 +175,12 @@ export const Navbar: React.FC<NavbarProps> = ({
           ) : (
             
             <div className="flex items-center gap-2.5">
-              <a
-                href="https://app.lucentaidemo.com/login"
-                target="_blank"
-                rel="noopener noreferrer"
+              <button
+                onClick={onOpenLogin}
                 className="hidden sm:flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-semibold rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 transition cursor-pointer"
               >
                 Sign In
-              </a>
+              </button>
               <button
                 id="btn-nav-signup"
 

@@ -196,7 +196,7 @@ export const LiveVoiceDemo: React.FC<LiveVoiceDemoProps> = ({ onOpenSignUp }) =>
         console.warn('Failed to init Vapi client:', e);
       }
     }
-  }, [vapiPublicKey, customApiKeyInput, callDuration]);
+  }, [vapiPublicKey, customApiKeyInput]);
 
   const handleSendMessageRef = useRef<any>(null);
   useEffect(() => {
@@ -243,9 +243,13 @@ export const LiveVoiceDemo: React.FC<LiveVoiceDemoProps> = ({ onOpenSignUp }) =>
   // Auto-manage continuous listening during the call
   useEffect(() => {
     if (isCallActive && isFallbackActiveRef.current && recognitionRef.current && !isListening && !isMuted && !isAgentSpeaking) {
-      try {
-        recognitionRef.current.start();
-      } catch (e) {}
+      // Debounce restart to avoid InvalidStateError when recognition hasn't fully detached
+      const timer = setTimeout(() => {
+        try {
+          recognitionRef.current?.start();
+        } catch (e) {}
+      }, 120);
+      return () => clearTimeout(timer);
     }
     if (!isCallActive && recognitionRef.current && isListening) {
       try {
@@ -279,6 +283,18 @@ export const LiveVoiceDemo: React.FC<LiveVoiceDemoProps> = ({ onOpenSignUp }) =>
   }, [messages, isAgentSpeaking]);
 
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const voicesRef = useRef<SpeechSynthesisVoice[]>([]);
+
+  // Load voices asynchronously (Chrome populates voices async)
+  useEffect(() => {
+    if (!window.speechSynthesis) return;
+    const loadVoices = () => {
+      voicesRef.current = window.speechSynthesis.getVoices();
+    };
+    loadVoices();
+    window.speechSynthesis.onvoiceschanged = loadVoices;
+    return () => { window.speechSynthesis.onvoiceschanged = null; };
+  }, []);
 
   // Speak agent message using Web Speech Synthesis
   const speakText = (text: string) => {
@@ -291,7 +307,7 @@ export const LiveVoiceDemo: React.FC<LiveVoiceDemoProps> = ({ onOpenSignUp }) =>
     utterance.pitch = 1.0;
     
     // Choose high quality english voice if available
-    const voices = window.speechSynthesis.getVoices();
+    const voices = voicesRef.current.length > 0 ? voicesRef.current : window.speechSynthesis.getVoices();
     const naturalVoice = voices.find(v => (v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('Samantha') || v.name.includes('Karen')) && v.lang.startsWith('en')) || voices[0];
     if (naturalVoice) {
       utterance.voice = naturalVoice;
