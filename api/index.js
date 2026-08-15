@@ -1,47 +1,20 @@
-var __create = Object.create;
 var __defProp = Object.defineProperty;
-var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
-var __getOwnPropNames = Object.getOwnPropertyNames;
-var __getProtoOf = Object.getPrototypeOf;
-var __hasOwnProp = Object.prototype.hasOwnProperty;
 var __export = (target, all) => {
   for (var name in all)
     __defProp(target, name, { get: all[name], enumerable: true });
 };
-var __copyProps = (to, from, except, desc2) => {
-  if (from && typeof from === "object" || typeof from === "function") {
-    for (let key of __getOwnPropNames(from))
-      if (!__hasOwnProp.call(to, key) && key !== except)
-        __defProp(to, key, { get: () => from[key], enumerable: !(desc2 = __getOwnPropDesc(from, key)) || desc2.enumerable });
-  }
-  return to;
-};
-var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(
-  // If the importer is in node compatibility mode or this is not an ESM
-  // file that has been converted to a CommonJS file using a Babel-
-  // compatible transform (i.e. "__esModule" has not been set), then set
-  // "default" to the CommonJS "module.exports" for node compatibility.
-  isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
-  mod
-));
-var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
 // server.ts
-var server_exports = {};
-__export(server_exports, {
-  default: () => server_default
-});
-module.exports = __toCommonJS(server_exports);
-var import_config = require("dotenv/config");
-var import_express = __toESM(require("express"), 1);
-var import_cors = __toESM(require("cors"), 1);
-var import_path = __toESM(require("path"), 1);
-var import_vite = require("vite");
-var import_genai = require("@google/genai");
+import "dotenv/config";
+import express from "express";
+import cors from "cors";
+import path from "path";
+import { createServer as createViteServer } from "vite";
+import { GoogleGenAI, Type } from "@google/genai";
 
 // src/lib/firebase-admin.ts
-var import_app = require("firebase-admin/app");
-var import_auth = require("firebase-admin/auth");
+import { initializeApp, getApps } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
 
 // firebase-applet-config.json
 var firebase_applet_config_default = {
@@ -57,12 +30,12 @@ var firebase_applet_config_default = {
 };
 
 // src/lib/firebase-admin.ts
-if (!(0, import_app.getApps)().length) {
-  (0, import_app.initializeApp)({
+if (!getApps().length) {
+  initializeApp({
     projectId: firebase_applet_config_default.projectId
   });
 }
-var adminAuth = (0, import_auth.getAuth)();
+var adminAuth = getAuth();
 
 // src/middleware/auth.ts
 var requireAuth = async (req, res, next) => {
@@ -82,8 +55,8 @@ var requireAuth = async (req, res, next) => {
 };
 
 // src/db/index.ts
-var import_node_postgres = require("drizzle-orm/node-postgres");
-var import_pg = require("pg");
+import { drizzle } from "drizzle-orm/node-postgres";
+import { Pool } from "pg";
 
 // src/db/schema.ts
 var schema_exports = {};
@@ -94,78 +67,78 @@ __export(schema_exports, {
   talktimeRequests: () => talktimeRequests,
   users: () => users
 });
-var import_pg_core = require("drizzle-orm/pg-core");
-var users = (0, import_pg_core.pgTable)("users", {
-  uid: (0, import_pg_core.text)("uid").primaryKey(),
-  email: (0, import_pg_core.text)("email").notNull(),
-  displayName: (0, import_pg_core.text)("display_name"),
-  role: (0, import_pg_core.text)("role").default("client").notNull(),
-  createdAt: (0, import_pg_core.timestamp)("created_at").defaultNow()
+import { pgTable, text, timestamp, integer, boolean } from "drizzle-orm/pg-core";
+var users = pgTable("users", {
+  uid: text("uid").primaryKey(),
+  email: text("email").notNull(),
+  displayName: text("display_name"),
+  role: text("role").default("client").notNull(),
+  createdAt: timestamp("created_at").defaultNow()
 });
-var clients = (0, import_pg_core.pgTable)("clients", {
-  id: (0, import_pg_core.text)("id").primaryKey(),
-  userId: (0, import_pg_core.text)("user_id").references(() => users.uid),
-  companyName: (0, import_pg_core.text)("company_name").notNull(),
-  contactName: (0, import_pg_core.text)("contact_name").notNull(),
-  email: (0, import_pg_core.text)("email").notNull(),
-  industry: (0, import_pg_core.text)("industry").notNull(),
-  status: (0, import_pg_core.text)("status").default("active").notNull(),
-  vapiAssistantId: (0, import_pg_core.text)("vapi_assistant_id"),
-  vapiVoiceId: (0, import_pg_core.text)("vapi_voice_id"),
-  vapiVoiceName: (0, import_pg_core.text)("vapi_voice_name"),
-  twilioPhoneNumber: (0, import_pg_core.text)("twilio_phone_number"),
-  systemPrompt: (0, import_pg_core.text)("system_prompt"),
-  firstMessage: (0, import_pg_core.text)("first_message"),
-  talktimeMinutesTotal: (0, import_pg_core.integer)("talktime_minutes_total").default(5e3).notNull(),
-  talktimeMinutesUsed: (0, import_pg_core.integer)("talktime_minutes_used").default(0).notNull(),
-  activeLines: (0, import_pg_core.integer)("active_lines").default(5).notNull(),
-  callingHoursStart: (0, import_pg_core.text)("calling_hours_start").default("09:00").notNull(),
-  callingHoursEnd: (0, import_pg_core.text)("calling_hours_end").default("18:00").notNull(),
-  timezone: (0, import_pg_core.text)("timezone").default("America/New_York (EST)").notNull(),
-  autoFollowupEnabled: (0, import_pg_core.boolean)("auto_followup_enabled").default(true).notNull(),
-  followupDelayHours: (0, import_pg_core.integer)("followup_delay_hours").default(12).notNull(),
-  subscriptionPlan: (0, import_pg_core.text)("subscription_plan").default("starter").notNull(),
-  stripeCustomerId: (0, import_pg_core.text)("stripe_customer_id"),
-  createdAt: (0, import_pg_core.timestamp)("created_at").defaultNow()
+var clients = pgTable("clients", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").references(() => users.uid),
+  companyName: text("company_name").notNull(),
+  contactName: text("contact_name").notNull(),
+  email: text("email").notNull(),
+  industry: text("industry").notNull(),
+  status: text("status").default("active").notNull(),
+  vapiAssistantId: text("vapi_assistant_id"),
+  vapiVoiceId: text("vapi_voice_id"),
+  vapiVoiceName: text("vapi_voice_name"),
+  twilioPhoneNumber: text("twilio_phone_number"),
+  systemPrompt: text("system_prompt"),
+  firstMessage: text("first_message"),
+  talktimeMinutesTotal: integer("talktime_minutes_total").default(5e3).notNull(),
+  talktimeMinutesUsed: integer("talktime_minutes_used").default(0).notNull(),
+  activeLines: integer("active_lines").default(5).notNull(),
+  callingHoursStart: text("calling_hours_start").default("09:00").notNull(),
+  callingHoursEnd: text("calling_hours_end").default("18:00").notNull(),
+  timezone: text("timezone").default("America/New_York (EST)").notNull(),
+  autoFollowupEnabled: boolean("auto_followup_enabled").default(true).notNull(),
+  followupDelayHours: integer("followup_delay_hours").default(12).notNull(),
+  subscriptionPlan: text("subscription_plan").default("starter").notNull(),
+  stripeCustomerId: text("stripe_customer_id"),
+  createdAt: timestamp("created_at").defaultNow()
 });
-var talktimeRequests = (0, import_pg_core.pgTable)("talktime_requests", {
-  id: (0, import_pg_core.text)("id").primaryKey(),
-  clientId: (0, import_pg_core.text)("client_id").references(() => clients.id),
-  minutesRequested: (0, import_pg_core.integer)("minutes_requested").notNull(),
-  amountDue: (0, import_pg_core.integer)("amount_due").notNull(),
-  status: (0, import_pg_core.text)("status").default("pending").notNull(),
+var talktimeRequests = pgTable("talktime_requests", {
+  id: text("id").primaryKey(),
+  clientId: text("client_id").references(() => clients.id),
+  minutesRequested: integer("minutes_requested").notNull(),
+  amountDue: integer("amount_due").notNull(),
+  status: text("status").default("pending").notNull(),
   // pending, approved, rejected
-  createdAt: (0, import_pg_core.timestamp)("created_at").defaultNow()
+  createdAt: timestamp("created_at").defaultNow()
 });
-var leads = (0, import_pg_core.pgTable)("leads", {
-  id: (0, import_pg_core.text)("id").primaryKey(),
-  companyName: (0, import_pg_core.text)("company_name").notNull(),
-  contactName: (0, import_pg_core.text)("contact_name").notNull(),
-  email: (0, import_pg_core.text)("email").notNull(),
-  status: (0, import_pg_core.text)("status").default("pending_configuration").notNull(),
-  meetingRequested: (0, import_pg_core.boolean)("meeting_requested").default(false).notNull(),
-  meetingTime: (0, import_pg_core.text)("meeting_time"),
-  createdAt: (0, import_pg_core.timestamp)("created_at").defaultNow()
+var leads = pgTable("leads", {
+  id: text("id").primaryKey(),
+  companyName: text("company_name").notNull(),
+  contactName: text("contact_name").notNull(),
+  email: text("email").notNull(),
+  status: text("status").default("pending_configuration").notNull(),
+  meetingRequested: boolean("meeting_requested").default(false).notNull(),
+  meetingTime: text("meeting_time"),
+  createdAt: timestamp("created_at").defaultNow()
 });
-var callLogs = (0, import_pg_core.pgTable)("call_logs", {
-  id: (0, import_pg_core.text)("id").primaryKey(),
-  clientId: (0, import_pg_core.text)("client_id").references(() => clients.id),
-  leadName: (0, import_pg_core.text)("lead_name").notNull(),
-  leadPhone: (0, import_pg_core.text)("lead_phone").notNull(),
-  leadCompany: (0, import_pg_core.text)("lead_company"),
-  callDurationSeconds: (0, import_pg_core.integer)("call_duration_seconds").default(0).notNull(),
-  disposition: (0, import_pg_core.text)("disposition").default("completed").notNull(),
-  sentiment: (0, import_pg_core.text)("sentiment").default("positive").notNull(),
-  transcript: (0, import_pg_core.text)("transcript"),
-  recordingUrl: (0, import_pg_core.text)("recording_url"),
-  scheduledCallback: (0, import_pg_core.text)("scheduled_callback"),
-  createdAt: (0, import_pg_core.timestamp)("created_at").defaultNow()
+var callLogs = pgTable("call_logs", {
+  id: text("id").primaryKey(),
+  clientId: text("client_id").references(() => clients.id),
+  leadName: text("lead_name").notNull(),
+  leadPhone: text("lead_phone").notNull(),
+  leadCompany: text("lead_company"),
+  callDurationSeconds: integer("call_duration_seconds").default(0).notNull(),
+  disposition: text("disposition").default("completed").notNull(),
+  sentiment: text("sentiment").default("positive").notNull(),
+  transcript: text("transcript"),
+  recordingUrl: text("recording_url"),
+  scheduledCallback: text("scheduled_callback"),
+  createdAt: timestamp("created_at").defaultNow()
 });
 
 // src/db/index.ts
 var createPool = () => {
   if (!global._postgresPool) {
-    global._postgresPool = new import_pg.Pool({
+    global._postgresPool = new Pool({
       host: process.env.SQL_HOST,
       user: process.env.SQL_USER,
       password: process.env.SQL_PASSWORD,
@@ -180,10 +153,10 @@ var createPool = () => {
   return global._postgresPool;
 };
 var pool = createPool();
-var db = (0, import_node_postgres.drizzle)(pool, { schema: schema_exports });
+var db = drizzle(pool, { schema: schema_exports });
 
 // src/db/queries.ts
-var import_drizzle_orm = require("drizzle-orm");
+import { eq, desc } from "drizzle-orm";
 async function getOrCreateUser(uid, email, displayName) {
   try {
     const result = await db.insert(users).values({
@@ -205,7 +178,7 @@ async function getOrCreateUser(uid, email, displayName) {
 }
 async function getAllClients() {
   try {
-    return await db.select().from(clients).orderBy((0, import_drizzle_orm.desc)(clients.createdAt));
+    return await db.select().from(clients).orderBy(desc(clients.createdAt));
   } catch (error) {
     console.error("Database clients query failed:", error);
     throw new Error("Database clients query failed.", { cause: error });
@@ -222,10 +195,10 @@ async function createClient(clientData) {
 }
 
 // server.ts
-var app = (0, import_express.default)();
-app.use((0, import_cors.default)());
+var app = express();
+app.use(cors());
 var PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3e3;
-app.use(import_express.default.json());
+app.use(express.json());
 app.post("/api/auth/sync", requireAuth, async (req, res) => {
   try {
     const uid = req.user?.uid;
@@ -256,7 +229,7 @@ app.post("/api/db/clients", async (req, res) => {
     res.status(500).json({ error: error.message || "Failed to save client to database" });
   }
 });
-var ai = new import_genai.GoogleGenAI({
+var ai = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY || "",
   httpOptions: {
     headers: {
@@ -372,34 +345,34 @@ Generate a realistic 4-to-6 turn phone dialog transcript, followed by a structur
       config: {
         responseMimeType: "application/json",
         responseSchema: {
-          type: import_genai.Type.OBJECT,
+          type: Type.OBJECT,
           properties: {
-            callDurationSeconds: { type: import_genai.Type.INTEGER },
-            sentiment: { type: import_genai.Type.STRING, enum: ["positive", "neutral", "negative"] },
-            conversionChance: { type: import_genai.Type.INTEGER },
-            aiConclusion: { type: import_genai.Type.STRING },
+            callDurationSeconds: { type: Type.INTEGER },
+            sentiment: { type: Type.STRING, enum: ["positive", "neutral", "negative"] },
+            conversionChance: { type: Type.INTEGER },
+            aiConclusion: { type: Type.STRING },
             keyObjections: {
-              type: import_genai.Type.ARRAY,
-              items: { type: import_genai.Type.STRING }
+              type: Type.ARRAY,
+              items: { type: Type.STRING }
             },
             transcript: {
-              type: import_genai.Type.ARRAY,
+              type: Type.ARRAY,
               items: {
-                type: import_genai.Type.OBJECT,
+                type: Type.OBJECT,
                 properties: {
-                  speaker: { type: import_genai.Type.STRING, enum: ["agent", "lead"] },
-                  text: { type: import_genai.Type.STRING },
-                  timestamp: { type: import_genai.Type.STRING }
+                  speaker: { type: Type.STRING, enum: ["agent", "lead"] },
+                  text: { type: Type.STRING },
+                  timestamp: { type: Type.STRING }
                 },
                 required: ["speaker", "text", "timestamp"]
               }
             },
             followupDraft: {
-              type: import_genai.Type.OBJECT,
+              type: Type.OBJECT,
               properties: {
-                channel: { type: import_genai.Type.STRING, enum: ["email", "sms"] },
-                subject: { type: import_genai.Type.STRING },
-                body: { type: import_genai.Type.STRING }
+                channel: { type: Type.STRING, enum: ["email", "sms"] },
+                subject: { type: Type.STRING },
+                body: { type: Type.STRING }
               },
               required: ["channel", "body"]
             }
@@ -480,15 +453,15 @@ The prompt must include:
       config: {
         responseMimeType: "application/json",
         responseSchema: {
-          type: import_genai.Type.OBJECT,
+          type: Type.OBJECT,
           properties: {
-            systemPrompt: { type: import_genai.Type.STRING },
-            firstMessage: { type: import_genai.Type.STRING },
-            suggestedVoiceId: { type: import_genai.Type.STRING },
-            suggestedVoiceName: { type: import_genai.Type.STRING },
+            systemPrompt: { type: Type.STRING },
+            firstMessage: { type: Type.STRING },
+            suggestedVoiceId: { type: Type.STRING },
+            suggestedVoiceName: { type: Type.STRING },
             keyObjectionTips: {
-              type: import_genai.Type.ARRAY,
-              items: { type: import_genai.Type.STRING }
+              type: Type.ARRAY,
+              items: { type: Type.STRING }
             }
           },
           required: ["systemPrompt", "firstMessage", "suggestedVoiceId", "suggestedVoiceName", "keyObjectionTips"]
@@ -633,16 +606,16 @@ app.post("/api/vapi/outbound", async (req, res) => {
 async function startServer() {
   if (process.env.VERCEL) return;
   if (process.env.NODE_ENV !== "production") {
-    const vite = await (0, import_vite.createServer)({
+    const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa"
     });
     app.use(vite.middlewares);
   } else {
-    const distPath = import_path.default.join(process.cwd(), "dist");
-    app.use(import_express.default.static(distPath));
+    const distPath = path.join(process.cwd(), "dist");
+    app.use(express.static(distPath));
     app.get("*", (req, res) => {
-      res.sendFile(import_path.default.join(distPath, "index.html"));
+      res.sendFile(path.join(distPath, "index.html"));
     });
   }
   app.listen(PORT, "0.0.0.0", () => {
@@ -650,8 +623,8 @@ async function startServer() {
   });
 }
 startServer();
-if (typeof module !== "undefined" && module.exports) {
-  module.exports = app;
-}
 var server_default = app;
-//# sourceMappingURL=server.cjs.map
+export {
+  server_default as default
+};
+//# sourceMappingURL=index.js.map
