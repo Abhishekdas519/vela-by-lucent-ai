@@ -1,0 +1,121 @@
+import { db } from './index.ts';
+import { users, clients, callLogs, leads, talktimeRequests } from './schema.ts';
+import { eq, desc } from 'drizzle-orm';
+
+// ... existing code ...
+export async function getOrCreateUser(uid: string, email: string, displayName?: string) {
+  try {
+    const result = await db.insert(users)
+      .values({
+        uid,
+        email,
+        displayName: displayName || email.split('@')[0],
+      })
+      .onConflictDoUpdate({
+        target: users.uid,
+        set: {
+          email,
+          displayName: displayName || email.split('@')[0],
+        },
+      })
+      .returning();
+    return result[0];
+  } catch (error) {
+    console.error("Database user query failed:", error);
+    throw new Error("Database user query failed. Please try again later.", { cause: error });
+  }
+}
+
+export async function getAllClients() {
+  try {
+    return await db.select().from(clients).orderBy(desc(clients.createdAt));
+  } catch (error) {
+    console.error("Database clients query failed:", error);
+    throw new Error("Database clients query failed.", { cause: error });
+  }
+}
+
+export async function createClient(clientData: typeof clients.$inferInsert) {
+  try {
+    const result = await db.insert(clients).values(clientData).returning();
+    return result[0];
+  } catch (error) {
+    console.error("Database create client failed:", error);
+    throw new Error("Database create client failed.", { cause: error });
+  }
+}
+
+export async function getClientLogs(clientId: string) {
+  try {
+    return await db.select().from(callLogs).where(eq(callLogs.clientId, clientId)).orderBy(desc(callLogs.createdAt));
+  } catch (error) {
+    console.error("Database call logs query failed:", error);
+    throw new Error("Database call logs query failed.", { cause: error });
+  }
+}
+
+export async function createLead(leadData: typeof leads.$inferInsert) {
+  try {
+    const result = await db.insert(leads).values(leadData).returning();
+    return result[0];
+  } catch (error) {
+    console.error("Database create lead failed:", error);
+    throw new Error("Database create lead failed.", { cause: error });
+  }
+}
+
+export async function getLeads() {
+  try {
+    return await db.select().from(leads).orderBy(desc(leads.createdAt));
+  } catch (error) {
+    console.error("Database get leads failed:", error);
+    throw new Error("Database get leads failed.", { cause: error });
+  }
+}
+
+export async function createTalktimeRequest(requestData: typeof talktimeRequests.$inferInsert) {
+  try {
+    const result = await db.insert(talktimeRequests).values(requestData).returning();
+    return result[0];
+  } catch (error) {
+    console.error("Database create talktime request failed:", error);
+    throw new Error("Database create talktime request failed.", { cause: error });
+  }
+}
+
+export async function getTalktimeRequests() {
+  try {
+    return await db.select().from(talktimeRequests).orderBy(desc(talktimeRequests.createdAt));
+  } catch (error) {
+    console.error("Database get talktime requests failed:", error);
+    throw new Error("Database get talktime requests failed.", { cause: error });
+  }
+}
+
+export async function updateTalktimeRequestStatus(requestId: string, status: string) {
+  try {
+    const result = await db.update(talktimeRequests)
+      .set({ status })
+      .where(eq(talktimeRequests.id, requestId))
+      .returning();
+    return result[0];
+  } catch (error) {
+    console.error("Database update talktime request status failed:", error);
+    throw new Error("Database update talktime request status failed.", { cause: error });
+  }
+}
+
+export async function updateClientTalktime(clientId: string, addedMinutes: number) {
+  try {
+    const client = await db.select().from(clients).where(eq(clients.id, clientId)).limit(1);
+    if (!client.length) throw new Error("Client not found");
+    const updated = await db.update(clients)
+      .set({ talktimeMinutesTotal: client[0].talktimeMinutesTotal + addedMinutes })
+      .where(eq(clients.id, clientId))
+      .returning();
+    return updated[0];
+  } catch (error) {
+    console.error("Database update client talktime failed:", error);
+    throw new Error("Database update client talktime failed.", { cause: error });
+  }
+}

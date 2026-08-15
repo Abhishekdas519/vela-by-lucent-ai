@@ -1,0 +1,15 @@
+--- src/types.ts
++++ src/types.ts
+@@ -82,3 +82,12 @@
+   monthlySavings: string;
+   quote: string;
+ }
++
++export interface AdminNotification {
++  id: string;
++  type: 'signup' | 'purchase_request' | 'system';
++  title: string;
++  message: string;
++  timestamp: string;
++  read: boolean;
++}
