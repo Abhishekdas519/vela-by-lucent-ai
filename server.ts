@@ -2,8 +2,8 @@ import express from 'express';
 import cors from 'cors';
 import path from 'path';
 import { GoogleGenAI, Type } from '@google/genai';
-import { requireAuth, AuthRequest } from './src/middleware/auth.ts';
-import { getOrCreateUser, getAllClients, createClient, getClientLogs } from './src/db/queries.ts';
+import { requireAuth, AuthRequest } from './src/middleware/auth';
+import { getOrCreateUser, getAllClients, createClient, getClientLogs } from './src/db/queries';
 
 const app = express();
 
