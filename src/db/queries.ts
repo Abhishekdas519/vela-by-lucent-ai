@@ -1,5 +1,5 @@
-import { db } from './index.ts';
-import { users, clients, callLogs, leads, talktimeRequests } from './schema.ts';
+import { db } from './index.js';
+import { users, clients, callLogs, leads, talktimeRequests } from './schema.js';
 import { eq, desc } from 'drizzle-orm';
 
 // ... existing code ...

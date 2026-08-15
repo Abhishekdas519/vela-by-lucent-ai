@@ -1,13 +1,14 @@
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
-import * as schema from './schema.ts';
+import * as schema from './schema.js';
 
 declare global {
   var _postgresPool: Pool | undefined;
+  var _drizzleDb: any | undefined;
 }
 
 export const createPool = () => {
-  if (!global._postgresPool) {
+  if (!global._postgresPool && process.env.SQL_HOST) {
     global._postgresPool = new Pool({
       host: process.env.SQL_HOST,
       user: process.env.SQL_USER,
@@ -24,6 +25,23 @@ export const createPool = () => {
   return global._postgresPool;
 };
 
-const pool = createPool();
+export const getDb = () => {
+  if (!global._drizzleDb) {
+    const pool = createPool();
+    if (pool) {
+      global._drizzleDb = drizzle(pool, { schema });
+    }
+  }
+  return global._drizzleDb;
+};
 
-export const db = drizzle(pool, { schema });
+// Proxy db to allow graceful calls
+export const db = new Proxy({} as any, {
+  get(target, prop) {
+    const activeDb = getDb();
+    if (!activeDb) {
+      throw new Error('Database not configured (SQL_HOST missing)');
+    }
+    return activeDb[prop];
+  }
+});
