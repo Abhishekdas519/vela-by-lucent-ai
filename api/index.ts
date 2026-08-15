@@ -1,5 +1,12 @@
-import app from '../server';
+import app from './app';
 
 export default function handler(req: any, res: any) {
-  return app(req, res);
+  try {
+    return app(req, res);
+  } catch (error: any) {
+    console.error('Serverless error:', error);
+    if (!res.headersSent) {
+      res.status(500).json({ error: error?.message || 'Server error' });
+    }
+  }
 }
