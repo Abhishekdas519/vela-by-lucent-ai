@@ -505,5 +505,7 @@ async function startServer() {
   });
 }
 startServer();
-
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = app;
+}
 export default app;
