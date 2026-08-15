@@ -9,7 +9,6 @@ import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import path from "path";
-import { createServer as createViteServer } from "vite";
 import { GoogleGenAI, Type } from "@google/genai";
 
 // src/lib/firebase-admin.ts
@@ -606,6 +605,7 @@ app.post("/api/vapi/outbound", async (req, res) => {
 async function startServer() {
   if (process.env.VERCEL) return;
   if (process.env.NODE_ENV !== "production") {
+    const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa"

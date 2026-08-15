@@ -2,7 +2,6 @@ import "dotenv/config";
 import express from 'express';
 import cors from 'cors';
 import path from 'path';
-import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI, Type } from '@google/genai';
 import { requireAuth, AuthRequest } from './src/middleware/auth.ts';
 import { getOrCreateUser, getAllClients, createClient, getClientLogs } from './src/db/queries.ts';
@@ -487,6 +486,7 @@ async function startServer() {
   if (process.env.VERCEL) return; // Do nothing if on Vercel
   
   if (process.env.NODE_ENV !== 'production') {
+    const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa',
