@@ -506,6 +506,13 @@ async function startServer() {
 startServer();
 
 export default function handler(req: any, res: any) {
-  return app(req, res);
+  try {
+    return app(req, res);
+  } catch (error: any) {
+    console.error('Serverless execution error:', error);
+    if (!res.headersSent) {
+      res.status(500).json({ error: error?.message || 'Internal Server Error' });
+    }
+  }
 }
 export { app };

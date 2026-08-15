@@ -96213,7 +96213,14 @@ async function startServer() {
 }
 startServer();
 function handler(req, res) {
-  return app(req, res);
+  try {
+    return app(req, res);
+  } catch (error) {
+    console.error("Serverless execution error:", error);
+    if (!res.headersSent) {
+      res.status(500).json({ error: error?.message || "Internal Server Error" });
+    }
+  }
 }
 export {
   app,
