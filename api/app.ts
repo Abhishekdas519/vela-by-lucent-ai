@@ -34,7 +34,7 @@ async function generateWithFallback(params: {
     throw new Error('No GEMINI_API_KEY set');
   }
 
-  const models = ['gemini-2.0-flash', 'gemini-2.0-flash-lite'];
+  const models = ['gemini-3.5-flash', 'gemini-3.5-flash-lite'];
   let lastError: any = null;
 
   for (const model of models) {
